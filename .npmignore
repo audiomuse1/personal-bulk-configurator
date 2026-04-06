@@ -1,0 +1,16 @@
+# Source files (consumers get dist/ only)
+src/
+proxy/
+.devcontainer/
+.vscode/
+.env
+.env.example
+.dockerignore
+Dockerfile
+docker-compose.yml
+index.html
+vite.config.ts
+tsconfig.json
+.gitignore
+node_modules/
+*.log

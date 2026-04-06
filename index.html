@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bulk Order Configurator</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .product-toggle {
+        text-align: center;
+        margin-bottom: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+      }
+      .product-toggle button {
+        padding: 10px 16px;
+        border: 2px solid #333;
+        border-radius: 4px;
+        background: white;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .product-toggle button.active {
+        background: #333;
+        color: white;
+      }
+      .product-section {
+        display: none;
+      }
+      .product-section.active {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Bulk Order Configurator</h1>
+
+    <div class="product-toggle">
+      <button class="active" onclick="showProduct('tshirt')">
+        🎽 T-Shirts
+      </button>
+      <button onclick="showProduct('sticker')">🏷️ Stickers</button>
+      <button onclick="showProduct('button')">🔘 Buttons</button>
+      <button onclick="showProduct('mug')">☕ Mugs</button>
+      <button onclick="showProduct('cancooler')">🥤 Can Coolers</button>
+      <button onclick="showProduct('yardsign')">🪧 Yard Signs</button>
+    </div>
+
+    <div id="tshirt-config" class="product-section active">
+      <bulk-configurator
+        productType="tshirt"
+        productId="123"
+      ></bulk-configurator>
+    </div>
+    <div id="sticker-config" class="product-section">
+      <bulk-configurator
+        productType="sticker"
+        productId="456"
+      ></bulk-configurator>
+    </div>
+    <div id="button-config" class="product-section">
+      <bulk-configurator
+        productType="button"
+        productId="789"
+      ></bulk-configurator>
+    </div>
+    <div id="mug-config" class="product-section">
+      <bulk-configurator productType="mug" productId="101"></bulk-configurator>
+    </div>
+    <div id="cancooler-config" class="product-section">
+      <bulk-configurator
+        productType="cancooler"
+        productId="102"
+      ></bulk-configurator>
+    </div>
+    <div id="yardsign-config" class="product-section">
+      <bulk-configurator
+        productType="yardsign"
+        productId="103"
+      ></bulk-configurator>
+    </div>
+
+    <script type="module" src="/src/components/index.ts"></script>
+    <script>
+      function showProduct(type) {
+        document.querySelectorAll(".product-section").forEach(function (el) {
+          el.classList.remove("active");
+        });
+        document.getElementById(type + "-config").classList.add("active");
+        document
+          .querySelectorAll(".product-toggle button")
+          .forEach(function (btn) {
+            btn.classList.remove("active");
+          });
+        event.target.classList.add("active");
+      }
+    </script>
+  </body>
+</html>
