@@ -18,8 +18,9 @@ export class StepButtonConfig extends LitElement {
   static styles = css`
     :host { display: block; font-family: inherit; }
     .card {
+      background: var(--bulk-card-bg, #ffffff);
       margin-bottom: 16px;
-      border: 2px solid #e0e0e0;
+      border: 2px solid var(--bulk-card-border, #e0e0e0);
       border-radius: 8px;
       overflow: visible;
       transition: border-color 0.3s;
@@ -41,14 +42,14 @@ export class StepButtonConfig extends LitElement {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: #fafafa;
-      border-bottom: 1px solid #e0e0e0;
+      background: var(--bulk-card-header-bg, #fafafa);
+      border-bottom: 1px solid var(--bulk-card-border, #e0e0e0);
     }
     .card-header .header-text { flex: 1; }
     .card-header .status { font-size: 13px; font-weight: 400; }
     .card-header .status.done { color: #2ecc71; }
     .card-header .status.needed { color: #e74c3c; }
-    .card-body { padding: 16px; }
+    .card-body { padding: 16px; background: var(--bulk-card-body-bg, #ffffff); }
     .size-options {
       display: flex;
       flex-wrap: wrap;
@@ -57,7 +58,7 @@ export class StepButtonConfig extends LitElement {
     }
     .size-btn {
       padding: 16px 24px;
-      border: 2px solid #e0e0e0;
+      border: 2px solid var(--bulk-card-border, #e0e0e0);
       border-radius: 8px;
       background: white;
       cursor: pointer;
@@ -79,7 +80,7 @@ export class StepButtonConfig extends LitElement {
     }
     .qty-btn {
       padding: 10px 16px;
-      border: 2px solid #e0e0e0;
+      border: 2px solid var(--bulk-card-border, #e0e0e0);
       border-radius: 6px;
       background: white;
       cursor: pointer;
@@ -143,7 +144,7 @@ export class StepButtonConfig extends LitElement {
       border: 1px solid #e0e0e0;
       text-align: center;
     }
-    .price-table th { background: #fafafa; font-weight: 600; }
+    .price-table th { background: var(--bulk-card-header-bg, #fafafa); font-weight: 600; }
     .price-table .current { background: #e8f8f5; font-weight: 700; }
     .price-prompt {
       margin-top: 20px;

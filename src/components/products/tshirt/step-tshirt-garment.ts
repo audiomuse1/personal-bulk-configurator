@@ -33,8 +33,9 @@ export class StepTShirtGarment extends LitElement {
       font-family: inherit;
     }
     .card {
+      background: var(--bulk-card-bg, #ffffff);
       margin-bottom: 16px;
-      border: 2px solid #e0e0e0;
+      border: 2px solid var(--bulk-card-border, #e0e0e0);
       border-radius: 8px;
       overflow: visible;
       transition: border-color 0.3s;
@@ -58,8 +59,8 @@ export class StepTShirtGarment extends LitElement {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: #fafafa;
-      border-bottom: 1px solid #e0e0e0;
+      background: var(--bulk-card-header-bg, #fafafa);
+      border-bottom: 1px solid var(--bulk-card-border, #e0e0e0);
     }
     .card-header .header-text {
       flex: 1;

@@ -19,8 +19,9 @@ export class StepYardSignConfig extends LitElement {
   static styles = css`
     :host { display: block; font-family: inherit; }
     .card {
+      background: var(--bulk-card-bg, #ffffff);
       margin-bottom: 16px;
-      border: 2px solid #e0e0e0;
+      border: 2px solid var(--bulk-card-border, #e0e0e0);
       border-radius: 8px;
       overflow: visible;
       transition: border-color 0.3s;
@@ -39,19 +40,19 @@ export class StepYardSignConfig extends LitElement {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: #fafafa;
-      border-bottom: 1px solid #e0e0e0;
+      background: var(--bulk-card-header-bg, #fafafa);
+      border-bottom: 1px solid var(--bulk-card-border, #e0e0e0);
     }
     .card-header .header-text { flex: 1; }
     .card-header .status { font-size: 13px; font-weight: 400; }
     .card-header .status.done { color: #2ecc71; }
     .card-header .status.needed { color: #e74c3c; }
-    .card-body { padding: 16px; }
+    .card-body { padding: 16px; background: var(--bulk-card-body-bg, #ffffff); }
     .print-options { display: flex; gap: 12px; margin-top: 8px; }
     .print-btn {
       flex: 1;
       padding: 16px;
-      border: 2px solid #e0e0e0;
+      border: 2px solid var(--bulk-card-border, #e0e0e0);
       border-radius: 8px;
       background: white;
       cursor: pointer;
@@ -87,7 +88,7 @@ export class StepYardSignConfig extends LitElement {
       gap: 10px;
       margin-top: 10px;
       padding: 14px 16px;
-      border: 2px solid #e0e0e0;
+      border: 2px solid var(--bulk-card-border, #e0e0e0);
       border-radius: 6px;
       cursor: pointer;
       transition: all 0.2s;
@@ -162,7 +163,7 @@ export class StepYardSignConfig extends LitElement {
       border: 1px solid #e0e0e0;
       text-align: center;
     }
-    .price-table th { background: #fafafa; font-weight: 600; }
+    .price-table th { background: var(--bulk-card-header-bg, #fafafa); font-weight: 600; }
     .price-table .current { background: #e8f8f5; font-weight: 700; }
     .price-prompt {
       margin-top: 20px;

@@ -45,8 +45,9 @@ export class StepStickerConfig extends LitElement {
     }
 
     .card {
+      background: var(--bulk-card-bg, #ffffff);
       margin-bottom: 16px;
-      border: 2px solid #e0e0e0;
+      border: 2px solid var(--bulk-card-border, #e0e0e0);
       border-radius: 8px;
       overflow: hidden;
       transition: border-color 0.3s;
@@ -81,8 +82,8 @@ export class StepStickerConfig extends LitElement {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: #fafafa;
-      border-bottom: 1px solid #e0e0e0;
+      background: var(--bulk-card-header-bg, #fafafa);
+      border-bottom: 1px solid var(--bulk-card-border, #e0e0e0);
     }
 
     .card-header .status {
@@ -111,7 +112,7 @@ export class StepStickerConfig extends LitElement {
 
     .shape-btn {
       padding: 14px 10px;
-      border: 2px solid #e0e0e0;
+      border: 2px solid var(--bulk-card-border, #e0e0e0);
       border-radius: 8px;
       background: white;
       cursor: pointer;
@@ -146,7 +147,7 @@ export class StepStickerConfig extends LitElement {
 
     .size-btn {
       padding: 10px 16px;
-      border: 2px solid #e0e0e0;
+      border: 2px solid var(--bulk-card-border, #e0e0e0);
       border-radius: 6px;
       background: white;
       cursor: pointer;
@@ -227,7 +228,7 @@ export class StepStickerConfig extends LitElement {
 
     .qty-btn {
       padding: 10px 16px;
-      border: 2px solid #e0e0e0;
+      border: 2px solid var(--bulk-card-border, #e0e0e0);
       border-radius: 6px;
       background: white;
       cursor: pointer;
@@ -285,7 +286,7 @@ export class StepStickerConfig extends LitElement {
       gap: 10px;
       margin: 10px 0;
       padding: 12px 16px;
-      border: 2px solid #e0e0e0;
+      border: 2px solid var(--bulk-card-border, #e0e0e0);
       border-radius: 6px;
       cursor: pointer;
       transition: all 0.2s;
