@@ -504,6 +504,7 @@ export class BulkConfigurator extends LitElement {
         return html`<step-artwork
           .printLocationId=${props.printLocationId || ""}
           .sidedness=${props.sidedness || "one-sided"}
+          .productType=${this.productType}
         ></step-artwork>`;
       case "step-union-label":
         return html`<step-union-label></step-union-label>`;
