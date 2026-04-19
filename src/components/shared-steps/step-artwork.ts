@@ -4,8 +4,53 @@ import { sharedStyles } from "../shared-styles.js";
 import "../info-tooltip.js";
 
 const ACCEPTED_FILES =
-  ".eps,.ai,.psd,.png,.jpg,.jpeg,.gif,.bmp,.svg,.tiff,.pdf";
+  ".eps,.ai,.psd,.png,.jpg,.jpeg,.gif,.bmp,.svg,.tiff,.tif,.pdf";
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const MIN_RECOMMENDED_DPI = 300;
+const MIN_ACCEPTABLE_DPI = 150;
+
+// Vector formats that don't need DPI checks
+const VECTOR_EXTENSIONS = [".eps", ".ai", ".svg", ".pdf", ".psd"];
+
+// Per-product artwork specs
+const PRODUCT_ARTWORK_SPECS: Record<string, { area: string; notes: string }> = {
+  tshirt: {
+    area: "12\" × 16\" print area",
+    notes: "Vector files (AI, EPS, SVG) or 300 DPI raster images preferred. For dark garments, provide artwork on a transparent background.",
+  },
+  sticker: {
+    area: "Up to 6\" × 6\" depending on shape",
+    notes: "Vector files strongly recommended for clean edges. Include 1/8\" bleed outside the cut line.",
+  },
+  button: {
+    area: "Circular print area based on button size",
+    notes: "Keep important elements away from edges — artwork wraps around the button. Vector preferred.",
+  },
+  mug: {
+    area: "8.5\" × 3.5\" wrap area",
+    notes: "Artwork wraps around the mug. Provide as a flat rectangle. 300 DPI minimum for photo-quality.",
+  },
+  cancooler: {
+    area: "8\" × 3.5\" per side",
+    notes: "Similar to mugs — artwork wraps around the cooler. Vector or 300 DPI raster.",
+  },
+  yardsign: {
+    area: "Varies by sign size (e.g., 24\" × 18\")",
+    notes: "Signs are viewed from a distance — bold text and high contrast work best. Vector preferred.",
+  },
+};
+
+interface FileAnalysis {
+  name: string;
+  size: number;
+  type: string;
+  extension: string;
+  isVector: boolean;
+  width?: number;
+  height?: number;
+  dpi?: number;
+  dpiWarning?: "low" | "very-low" | null;
+}
 
 @customElement("step-artwork")
 export class StepArtwork extends LitElement {
@@ -21,15 +66,44 @@ export class StepArtwork extends LitElement {
         font-size: 15px;
       }
       .upload-option input[type="radio"] {
-        accent-color: #4ecdc4;
+        accent-color: var(--bulk-configurator-accent, #4ecdc4);
       }
 
+      /* ── Artwork specs banner ─────────────────────────────── */
+      .artwork-specs {
+        margin: 12px 0;
+        padding: 12px 16px;
+        background: var(--bulk-card-header-bg, #f0f8ff);
+        border: 1px solid var(--bulk-card-border, #d0e8f0);
+        border-radius: 6px;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .artwork-specs-title {
+        font-weight: 700;
+        font-size: 14px;
+        margin-bottom: 4px;
+        color: var(--bulk-configurator-text-color, #333);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .artwork-specs-area {
+        font-weight: 600;
+        color: var(--bulk-configurator-accent, #4ecdc4);
+      }
+      .artwork-specs-notes {
+        color: var(--bulk-configurator-text-muted, #666);
+        margin-top: 4px;
+      }
+
+      /* ── Drop zone ────────────────────────────────────────── */
       .upload-section {
         margin: 16px 0;
         padding: 16px;
-        border: 2px solid #e0e0e0;
+        border: 2px solid var(--bulk-card-border, #e0e0e0);
         border-radius: 6px;
-        transition: border-color 0.3s;
+        transition: border-color 0.3s, background-color 0.3s;
       }
       .upload-section.valid {
         border-color: #2ecc71;
@@ -39,16 +113,9 @@ export class StepArtwork extends LitElement {
         animation: shake 0.4s ease-in-out;
       }
       @keyframes shake {
-        0%,
-        100% {
-          transform: translateX(0);
-        }
-        25% {
-          transform: translateX(-4px);
-        }
-        75% {
-          transform: translateX(4px);
-        }
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-4px); }
+        75% { transform: translateX(4px); }
       }
 
       .upload-section-title {
@@ -63,69 +130,146 @@ export class StepArtwork extends LitElement {
         font-size: 13px;
         font-weight: 400;
       }
-      .upload-section-title .status.done {
-        color: #2ecc71;
-      }
-      .upload-section-title .status.needed {
-        color: #e74c3c;
-      }
+      .upload-section-title .status.done { color: #2ecc71; }
+      .upload-section-title .status.needed { color: #e74c3c; }
 
-      .file-input-wrapper {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin: 8px 0;
-      }
-      .file-btn {
-        padding: 8px 16px;
-        background: #333;
-        color: white;
-        border: none;
-        border-radius: 4px;
+      /* ── Drag and drop zone ───────────────────────────────── */
+      .drop-zone {
+        border: 2px dashed var(--bulk-card-border, #ccc);
+        border-radius: 8px;
+        padding: 24px 16px;
+        text-align: center;
         cursor: pointer;
-        font-size: 13px;
-        font-weight: 600;
-        transition: all 0.2s;
+        transition: all 0.2s ease;
+        background: var(--bulk-card-body-bg, #fafafa);
       }
-      .file-btn:hover {
-        background: #555;
+      .drop-zone:hover {
+        border-color: var(--bulk-configurator-accent, #4ecdc4);
+        background: #f0faf9;
       }
-      .file-input {
-        display: none;
+      .drop-zone.drag-over {
+        border-color: var(--bulk-configurator-accent, #4ecdc4);
+        background: #e8f8f5;
+        transform: scale(1.01);
       }
-
-      .file-name {
+      .drop-zone-icon {
+        font-size: 32px;
+        margin-bottom: 8px;
+      }
+      .drop-zone-text {
         font-size: 14px;
-        color: #333;
-        display: flex;
-        align-items: center;
-        gap: 6px;
+        color: var(--bulk-configurator-text-muted, #666);
+        margin-bottom: 4px;
       }
-      .file-name .remove {
-        color: #e74c3c;
+      .drop-zone-text strong {
+        color: var(--bulk-configurator-accent, #4ecdc4);
         cursor: pointer;
-        font-weight: 700;
-        font-size: 16px;
-        padding: 0 4px;
       }
-      .file-name .remove:hover {
-        color: #c0392b;
+      .drop-zone-hint {
+        font-size: 12px;
+        color: #999;
       }
 
-      .preview-container {
-        margin: 12px 0;
-        padding: 8px;
+      .file-input { display: none; }
+
+      /* ── File display ─────────────────────────────────────── */
+      .file-display {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 12px;
         background: #f9f9f9;
-        border-radius: 4px;
-        display: inline-block;
+        border-radius: 6px;
+        border: 1px solid #e8e8e8;
       }
-      .preview {
-        max-width: 200px;
-        max-height: 200px;
+      .file-preview-thumb {
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
         border: 1px solid #ddd;
         border-radius: 4px;
+        background: white;
+        flex-shrink: 0;
+      }
+      .file-details {
+        flex: 1;
+        min-width: 0;
+      }
+      .file-details-name {
+        font-weight: 600;
+        font-size: 14px;
+        color: #333;
+        word-break: break-all;
+      }
+      .file-details-meta {
+        font-size: 12px;
+        color: #888;
+        margin-top: 2px;
+      }
+      .file-remove-btn {
+        background: none;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 4px 10px;
+        font-size: 12px;
+        color: #e74c3c;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+        flex-shrink: 0;
+      }
+      .file-remove-btn:hover {
+        background: #fdf0ef;
+        border-color: #e74c3c;
       }
 
+      /* ── DPI warnings ─────────────────────────────────────── */
+      .dpi-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 3px;
+        margin-top: 4px;
+      }
+      .dpi-badge.good {
+        background: #e8f8f0;
+        color: #27ae60;
+      }
+      .dpi-badge.low {
+        background: #fef9e7;
+        color: #e67e22;
+      }
+      .dpi-badge.very-low {
+        background: #fdf0ef;
+        color: #e74c3c;
+      }
+      .dpi-badge.vector {
+        background: #e8f0fe;
+        color: #2b6cb0;
+      }
+
+      .dpi-warning {
+        font-size: 12px;
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin-top: 8px;
+        line-height: 1.5;
+      }
+      .dpi-warning.low {
+        background: #fef9e7;
+        border: 1px solid #f0d060;
+        color: #856404;
+      }
+      .dpi-warning.very-low {
+        background: #fdf0ef;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+
+      /* ── File info/error ──────────────────────────────────── */
       .file-info {
         font-size: 13px;
         color: #888;
@@ -159,18 +303,10 @@ export class StepArtwork extends LitElement {
         color: #333;
         line-height: 1.6;
       }
-      .option-info strong {
-        color: #2c3e50;
-      }
-      .option-info p {
-        margin: 8px 0;
-      }
-      .option-info p:first-child {
-        margin-top: 0;
-      }
-      .option-info p:last-child {
-        margin-bottom: 0;
-      }
+      .option-info strong { color: #2c3e50; }
+      .option-info p { margin: 8px 0; }
+      .option-info p:first-child { margin-top: 0; }
+      .option-info p:last-child { margin-bottom: 0; }
 
       .checklist {
         margin-bottom: 16px;
@@ -197,31 +333,32 @@ export class StepArtwork extends LitElement {
         width: 20px;
         text-align: center;
       }
-      .checklist-item.done {
-        color: #2ecc71;
-      }
+      .checklist-item.done { color: #2ecc71; }
       .checklist-item.done .label {
         text-decoration: line-through;
         color: #999;
       }
-      .checklist-item.pending {
-        color: #e67e22;
-      }
+      .checklist-item.pending { color: #e67e22; }
     `,
   ];
 
   @property({ type: String }) printLocationId = "";
   @property({ type: String }) sidedness = "one-sided";
+  @property({ type: String }) productType = "";
 
   @state() artworkOption: "upload" | "email" | "help" = "upload";
   @state() frontFileName = "";
   @state() frontFilePreview = "";
   @state() frontFileError = "";
+  @state() frontFileAnalysis: FileAnalysis | null = null;
+  @state() frontDragOver = false;
   private frontFile: File | null = null;
 
   @state() backFileName = "";
   @state() backFilePreview = "";
   @state() backFileError = "";
+  @state() backFileAnalysis: FileAnalysis | null = null;
+  @state() backDragOver = false;
   private backFile: File | null = null;
 
   @state() showValidation = false;
@@ -264,8 +401,7 @@ export class StepArtwork extends LitElement {
   }
 
   get isComplete(): boolean {
-    if (this.artworkOption === "email" || this.artworkOption === "help")
-      return true;
+    if (this.artworkOption === "email" || this.artworkOption === "help") return true;
     if (this.isTwoSided) return !!(this.frontFileName && this.backFileName);
     return !!this.frontFileName;
   }
@@ -289,10 +425,12 @@ export class StepArtwork extends LitElement {
     this.frontFileName = "";
     this.frontFilePreview = "";
     this.frontFileError = "";
+    this.frontFileAnalysis = null;
     this.backFile = null;
     this.backFileName = "";
     this.backFilePreview = "";
     this.backFileError = "";
+    this.backFileAnalysis = null;
   }
 
   private dispatchData() {
@@ -321,66 +459,164 @@ export class StepArtwork extends LitElement {
     this.dispatchData();
   }
 
+  private getFileExtension(name: string): string {
+    return "." + (name.split(".").pop()?.toLowerCase() || "");
+  }
+
+  private isVectorFile(name: string): boolean {
+    return VECTOR_EXTENSIONS.includes(this.getFileExtension(name));
+  }
+
+  private formatFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
   private validateFile(file: File): string | null {
     if (file.size > MAX_FILE_SIZE) {
       return "File is too large. Maximum size is 20 MB.";
     }
-    const ext = "." + file.name.split(".").pop()?.toLowerCase();
+    const ext = this.getFileExtension(file.name);
     const allowed = ACCEPTED_FILES.split(",");
     if (!allowed.includes(ext)) {
-      return "File type not accepted. Please use: " + ACCEPTED_FILES;
+      return `File type "${ext}" not accepted. Please use: AI, EPS, PSD, PDF, SVG, PNG, JPG, or TIFF.`;
     }
     return null;
   }
 
-  onFrontFileChange(e: Event) {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (!file) return;
+  private async analyzeFile(file: File): Promise<FileAnalysis> {
+    const ext = this.getFileExtension(file.name);
+    const isVector = this.isVectorFile(file.name);
+    const analysis: FileAnalysis = {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      extension: ext,
+      isVector,
+      dpiWarning: null,
+    };
 
+    // For raster images, check dimensions and estimate DPI
+    if (!isVector && file.type.startsWith("image/")) {
+      try {
+        const dimensions = await this.getImageDimensions(file);
+        analysis.width = dimensions.width;
+        analysis.height = dimensions.height;
+
+        // Estimate DPI based on typical print sizes
+        // We'll assume the longer dimension maps to about 12 inches (t-shirt scale)
+        const longerPx = Math.max(dimensions.width, dimensions.height);
+        const estimatedDPI = Math.round(longerPx / 12);
+        analysis.dpi = estimatedDPI;
+
+        if (estimatedDPI < MIN_ACCEPTABLE_DPI) {
+          analysis.dpiWarning = "very-low";
+        } else if (estimatedDPI < MIN_RECOMMENDED_DPI) {
+          analysis.dpiWarning = "low";
+        }
+      } catch {
+        // Can't analyze — that's ok
+      }
+    }
+
+    return analysis;
+  }
+
+  private getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Could not load image"));
+      };
+      img.src = url;
+    });
+  }
+
+  private async processFile(file: File, side: "front" | "back") {
     const error = this.validateFile(file);
     if (error) {
-      this.frontFileError = error;
+      if (side === "front") {
+        this.frontFileError = error;
+      } else {
+        this.backFileError = error;
+      }
       return;
     }
 
-    this.frontFile = file;
-    this.frontFileName = file.name;
-    this.frontFilePreview = "";
-    this.frontFileError = "";
+    const analysis = await this.analyzeFile(file);
 
+    if (side === "front") {
+      this.frontFile = file;
+      this.frontFileName = file.name;
+      this.frontFilePreview = "";
+      this.frontFileError = "";
+      this.frontFileAnalysis = analysis;
+    } else {
+      this.backFile = file;
+      this.backFileName = file.name;
+      this.backFilePreview = "";
+      this.backFileError = "";
+      this.backFileAnalysis = analysis;
+    }
+
+    // Generate preview for image files
     if (file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onload = () => {
-        this.frontFilePreview = reader.result as string;
+        if (side === "front") {
+          this.frontFilePreview = reader.result as string;
+        } else {
+          this.backFilePreview = reader.result as string;
+        }
       };
       reader.readAsDataURL(file);
     }
+
     this.dispatchData();
+  }
+
+  // ── Drag and drop handlers ──────────────────────────────────────────
+  private onDragOver(e: DragEvent, side: "front" | "back") {
+    e.preventDefault();
+    e.stopPropagation();
+    if (side === "front") this.frontDragOver = true;
+    else this.backDragOver = true;
+  }
+
+  private onDragLeave(e: DragEvent, side: "front" | "back") {
+    e.preventDefault();
+    e.stopPropagation();
+    if (side === "front") this.frontDragOver = false;
+    else this.backDragOver = false;
+  }
+
+  private onDrop(e: DragEvent, side: "front" | "back") {
+    e.preventDefault();
+    e.stopPropagation();
+    if (side === "front") this.frontDragOver = false;
+    else this.backDragOver = false;
+
+    const file = e.dataTransfer?.files?.[0];
+    if (file) {
+      this.processFile(file, side);
+    }
+  }
+
+  onFrontFileChange(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) this.processFile(file, "front");
   }
 
   onBackFileChange(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-
-    const error = this.validateFile(file);
-    if (error) {
-      this.backFileError = error;
-      return;
-    }
-
-    this.backFile = file;
-    this.backFileName = file.name;
-    this.backFilePreview = "";
-    this.backFileError = "";
-
-    if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        this.backFilePreview = reader.result as string;
-      };
-      reader.readAsDataURL(file);
-    }
-    this.dispatchData();
+    if (file) this.processFile(file, "back");
   }
 
   removeFrontFile() {
@@ -388,6 +624,7 @@ export class StepArtwork extends LitElement {
     this.frontFileName = "";
     this.frontFilePreview = "";
     this.frontFileError = "";
+    this.frontFileAnalysis = null;
     this.dispatchData();
   }
 
@@ -396,13 +633,57 @@ export class StepArtwork extends LitElement {
     this.backFileName = "";
     this.backFilePreview = "";
     this.backFileError = "";
+    this.backFileAnalysis = null;
     this.dispatchData();
   }
 
   private uploadSectionClass(isValid: boolean): string {
-    if (!this.showValidation)
-      return "upload-section" + (isValid ? " valid" : "");
+    if (!this.showValidation) return "upload-section" + (isValid ? " valid" : "");
     return "upload-section" + (isValid ? " valid" : " invalid-highlight");
+  }
+
+  private renderDpiBadge(analysis: FileAnalysis | null) {
+    if (!analysis) return html``;
+
+    if (analysis.isVector) {
+      return html`<span class="dpi-badge vector">✓ Vector — print-ready</span>`;
+    }
+
+    if (!analysis.dpi) return html``;
+
+    if (analysis.dpiWarning === "very-low") {
+      return html`<span class="dpi-badge very-low">⚠ ~${analysis.dpi} DPI — may print poorly</span>`;
+    }
+    if (analysis.dpiWarning === "low") {
+      return html`<span class="dpi-badge low">⚠ ~${analysis.dpi} DPI — below 300 recommended</span>`;
+    }
+    return html`<span class="dpi-badge good">✓ ~${analysis.dpi} DPI</span>`;
+  }
+
+  private renderDpiWarning(analysis: FileAnalysis | null) {
+    if (!analysis || !analysis.dpiWarning) return html``;
+
+    if (analysis.dpiWarning === "very-low") {
+      return html`
+        <div class="dpi-warning very-low">
+          <strong>⚠️ Low resolution detected.</strong> This image is approximately ${analysis.dpi} DPI
+          at print size. We recommend 300 DPI for high-quality printing. Your order will still be
+          processed, but our design team may reach out about image quality.
+        </div>
+      `;
+    }
+
+    if (analysis.dpiWarning === "low") {
+      return html`
+        <div class="dpi-warning low">
+          <strong>⚠️ Resolution note:</strong> This image is approximately ${analysis.dpi} DPI at print
+          size. 300 DPI is recommended for best quality. It may still print acceptably depending on
+          the design.
+        </div>
+      `;
+    }
+
+    return html``;
   }
 
   private renderUploadSlot(
@@ -410,7 +691,10 @@ export class StepArtwork extends LitElement {
     fileName: string,
     filePreview: string,
     fileError: string,
+    fileAnalysis: FileAnalysis | null,
     isValid: boolean,
+    isDragOver: boolean,
+    side: "front" | "back",
     onChangeHandler: (e: Event) => void,
     onRemoveHandler: () => void,
     inputId: string,
@@ -424,41 +708,46 @@ export class StepArtwork extends LitElement {
           </span>
         </p>
 
-        ${fileName
+        ${fileName && fileAnalysis
           ? html`
-              <div class="file-name">
-                <span>📎 ${fileName}</span>
-                <span
-                  class="remove"
-                  title="Remove file"
-                  @click=${onRemoveHandler}
-                  >✕</span
-                >
+              <div class="file-display">
+                ${filePreview
+                  ? html`<img class="file-preview-thumb" src=${filePreview} alt="Preview" />`
+                  : html`
+                      <div class="file-preview-thumb" style="display:flex;align-items:center;justify-content:center;font-size:24px;background:#f0f0f0;">
+                        ${fileAnalysis.isVector ? "📐" : "📄"}
+                      </div>
+                    `}
+                <div class="file-details">
+                  <div class="file-details-name">${fileName}</div>
+                  <div class="file-details-meta">
+                    ${this.formatFileSize(fileAnalysis.size)}
+                    ${fileAnalysis.width ? html` · ${fileAnalysis.width} × ${fileAnalysis.height}px` : ""}
+                  </div>
+                  ${this.renderDpiBadge(fileAnalysis)}
+                </div>
+                <button class="file-remove-btn" @click=${onRemoveHandler}>Remove</button>
               </div>
-              ${filePreview
-                ? html`
-                    <div class="preview-container">
-                      <img class="preview" src=${filePreview} alt="Preview" />
-                    </div>
-                  `
-                : html``}
+              ${this.renderDpiWarning(fileAnalysis)}
             `
           : html`
-              <div class="file-input-wrapper">
-                <button
-                  class="file-btn"
-                  @click=${() => {
-                    const input = this.shadowRoot?.getElementById(
-                      inputId,
-                    ) as HTMLInputElement;
-                    input?.click();
-                  }}
-                >
-                  Choose File
-                </button>
-                <span style="color: #999; font-size: 13px;"
-                  >No file chosen</span
-                >
+              <div
+                class="drop-zone ${isDragOver ? "drag-over" : ""}"
+                @dragover=${(e: DragEvent) => this.onDragOver(e, side)}
+                @dragleave=${(e: DragEvent) => this.onDragLeave(e, side)}
+                @drop=${(e: DragEvent) => this.onDrop(e, side)}
+                @click=${() => {
+                  const input = this.shadowRoot?.getElementById(inputId) as HTMLInputElement;
+                  input?.click();
+                }}
+              >
+                <div class="drop-zone-icon">📁</div>
+                <div class="drop-zone-text">
+                  Drag & drop your file here, or <strong>browse</strong>
+                </div>
+                <div class="drop-zone-hint">
+                  AI, EPS, PSD, PDF, SVG, PNG, JPG, TIFF — 20 MB max
+                </div>
               </div>
               <input
                 id=${inputId}
@@ -468,14 +757,25 @@ export class StepArtwork extends LitElement {
                 @change=${onChangeHandler}
               />
               ${this.showValidation && !isValid
-                ? html`
-                    <div class="missing-prompt">
-                      ⚠️ Please upload your ${label.toLowerCase()}
-                    </div>
-                  `
+                ? html`<div class="missing-prompt">⚠️ Please upload your ${label.toLowerCase()}</div>`
                 : html``}
             `}
         ${fileError ? html`<p class="file-error">⚠️ ${fileError}</p>` : html``}
+      </div>
+    `;
+  }
+
+  private renderArtworkSpecs() {
+    const specs = PRODUCT_ARTWORK_SPECS[this.productType];
+    if (!specs) return html``;
+
+    return html`
+      <div class="artwork-specs">
+        <div class="artwork-specs-title">
+          🎨 Artwork Specifications
+        </div>
+        <div class="artwork-specs-area">📐 ${specs.area}</div>
+        <div class="artwork-specs-notes">${specs.notes}</div>
       </div>
     `;
   }
@@ -518,13 +818,15 @@ export class StepArtwork extends LitElement {
         <div class="step-header">
           <info-tooltip>
             Upload your print-ready artwork, or choose to send it later or
-            request design help. We accept .eps, .ai, .psd, .png, .jpg, .svg,
-            .pdf, and more. For best results, provide vector files or
+            request design help. We accept AI, EPS, PSD, PDF, SVG, PNG, JPG,
+            TIFF, and more. For best results, provide vector files or
             high-resolution images (300 DPI minimum).
           </info-tooltip>
           <span class="step-header-text">${headerText}</span>
         </div>
         <div class="step-body">
+          ${this.renderArtworkSpecs()}
+
           <label class="upload-option">
             <input
               type="radio"
@@ -562,7 +864,10 @@ export class StepArtwork extends LitElement {
                   this.frontFileName,
                   this.frontFilePreview,
                   this.frontFileError,
+                  this.frontFileAnalysis,
                   this.frontValid,
+                  this.frontDragOver,
+                  "front",
                   (e: Event) => this.onFrontFileChange(e),
                   () => this.removeFrontFile(),
                   "front-file-input",
@@ -574,18 +879,16 @@ export class StepArtwork extends LitElement {
                         this.backFileName,
                         this.backFilePreview,
                         this.backFileError,
+                        this.backFileAnalysis,
                         this.backValid,
+                        this.backDragOver,
+                        "back",
                         (e: Event) => this.onBackFileChange(e),
                         () => this.removeBackFile(),
                         "back-file-input",
                       )}
                     `
                   : html``}
-                <p class="file-info">📏 20 MB Maximum file size</p>
-                <p class="file-info">
-                  📁 Accepted: .eps, .ai, .psd, .png, .jpg, .jpeg, .gif, .bmp,
-                  .svg, .tiff, .pdf
-                </p>
               `
             : html``}
           ${this.artworkOption === "email"

@@ -25,6 +25,7 @@ const TSHIRT_CONFIG: ProductConfig = {
       title: "Upload Artwork",
       tag: "step-artwork",
       props: (data) => ({
+        productType: "tshirt",
         printLocationId: data.printLocationId || "",
         sidedness: data.printLocationSidedness || "one-sided",
       }),
@@ -56,6 +57,7 @@ const STICKER_CONFIG: ProductConfig = {
       title: "Upload Artwork",
       tag: "step-artwork",
       props: () => ({
+        productType: "sticker",
         printLocationId: "sticker-front",
         sidedness: "one-sided",
       }),
@@ -87,6 +89,7 @@ const BUTTON_CONFIG: ProductConfig = {
       title: "Upload Artwork",
       tag: "step-artwork",
       props: () => ({
+        productType: "button",
         printLocationId: "button-front",
         sidedness: "one-sided",
       }),
@@ -118,6 +121,7 @@ const MUG_CONFIG: ProductConfig = {
       title: "Upload Artwork",
       tag: "step-artwork",
       props: () => ({
+        productType: "mug",
         printLocationId: "mug-wrap",
         sidedness: "one-sided",
       }),
@@ -149,6 +153,7 @@ const CANCOOLER_CONFIG: ProductConfig = {
       title: "Upload Artwork",
       tag: "step-artwork",
       props: (data) => ({
+        productType: "cancooler",
         printLocationId: "cooler-wrap",
         sidedness:
           data.coolerPrintSide?.id === "two-sided" ? "two-sided" : "one-sided",
@@ -181,6 +186,7 @@ const YARDSIGN_CONFIG: ProductConfig = {
       title: "Upload Artwork",
       tag: "step-artwork",
       props: (data) => ({
+        productType: "yardsign",
         printLocationId: "sign-face",
         sidedness:
           data.signPrintSide?.id === "two-sided" ? "two-sided" : "one-sided",
